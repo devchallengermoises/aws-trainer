@@ -1,0 +1,22 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "module": "esnext",                         // ✅ Needed for import.meta
+    "target": "esnext",                         // ✅ Modern output
+    "moduleResolution": "node",                 // ✅ Proper module resolution
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]                          // ✅ Enable alias @
+    },
+    "types": ["vite/client"],                   // ✅ Type declarations for Vite
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+}

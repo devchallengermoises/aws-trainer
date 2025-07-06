@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+    backend:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        container_name: aws-trainer-backend
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./backend:/var/www
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - aws_trainer_network
+        ports:
+            - "8000:80"
+        environment:
+            - DB_HOST=db
+            - DB_DATABASE=quiz_db
+            - DB_USERNAME=root
+            - DB_PASSWORD=root
+            - REDIS_HOST=redis
+            - REDIS_PORT=6379
+            - APP_ENV=local
+            - APP_DEBUG=true
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+            args:
+                VITE_API_TOKEN: ${VITE_API_TOKEN:-super-secret-token}
+                VITE_API_URL: ${VITE_API_URL:-http://backend:80}
+        container_name: aws-trainer-frontend
+        restart: unless-stopped
+        ports:
+            - "3000:80"
+        depends_on:
+            - backend
+        networks:
+            - aws_trainer_network
+        environment:
+            - VITE_API_TOKEN=${VITE_API_TOKEN:-super-secret-token}
+            - VITE_API_URL=${VITE_API_URL:-http://backend:80}
+
+    db:
+        image: mysql:8
+        container_name: aws-trainer-mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: quiz_db
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_USER: quiz_user
+            MYSQL_PASSWORD: quiz_pass
+        ports:
+            - "3306:3306"
+        volumes:
+            - db_data:/var/lib/mysql
+        networks:
+            - aws_trainer_network
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    redis:
+        image: redis:alpine
+        container_name: aws-trainer-redis
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        networks:
+            - aws_trainer_network
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    redis-admin:
+        image: rediscommander/redis-commander:latest
+        container_name: aws-trainer-redis-admin
+        restart: unless-stopped
+        environment:
+            - REDIS_HOSTS=local:redis:6379
+        ports:
+            - "8081:8081"
+        networks:
+            - aws_trainer_network
+        depends_on:
+            - redis
+
+networks:
+    aws_trainer_network:
+
+volumes:
+    db_data: 

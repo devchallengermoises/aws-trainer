@@ -1,0 +1,20 @@
+networks:
+  quiz_network:
+    driver: bridge
+
+
+services:
+  vue:
+    build:
+      context: .  # <--- This should point to quiz-app correctly
+      dockerfile: Dockerfile
+    container_name: quiz-vue
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app  # <--- This ensures your Vue project is mounted inside the container
+    ports:
+      - "5173:5173"
+    networks:
+      - quiz_network
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"

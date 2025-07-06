@@ -1,0 +1,191 @@
+<template>
+  <div class="min-vh-100 bg-light py-5 px-3">
+    <div class="container">
+      <div class="mx-auto bg-white shadow-sm rounded-3 p-5" style="max-width: 960px;">
+        <div v-if="loading" class="text-center">Loading quiz...</div>
+
+        <div v-else-if="quizFinished">
+          <div class="text-center">
+            <h3>🎉 Quiz Completed!</h3>
+            <p class="fw-bold">
+              Score: {{ score?.correct_answers }}/{{ score?.total_questions }}
+              ({{ score?.score_percent }}%)
+            </p>
+            <button @click="resetQuiz" class="btn btn-outline-primary">Retake Quiz</button>
+          </div>
+        </div>
+
+        <div v-else>
+          <div class="d-flex justify-content-between mb-3">
+            <small>Question {{ currentIndex + 1 }} of {{ totalQuestions }}</small>
+            <div class="text-end">
+              <button class="btn btn-outline-danger btn-sm me-2" @click="abortTest">Abort Test</button>
+              <button class="btn btn-outline-danger btn-sm" @click="logout">Logout</button>
+            </div>
+          </div>
+          <transition name="fade-slide" mode="out-in">
+            <QuestionCard
+              v-if="currentQuestion"
+              :key="currentQuestion.id"
+              :question="currentQuestion"
+              :question-number="currentIndex + 1"
+              :total-questions="totalQuestions"
+              :highlight-correct="correctAnswerIds"
+              :saved-state="quizStore.userAnswers[currentQuestion.id]"
+              @answered="handleAnswer"
+            >
+              <template #next-button>
+                <transition name="fade-scale">
+                  <button
+                    v-if="currentIndex < totalQuestions - 1"
+                    class="btn btn-primary"
+                    @click="nextQuestion"
+                  >
+                    Next Question
+                  </button>
+                  <button
+                    v-else
+                    class="btn btn-success"
+                    @click="finish"
+                  >
+                    Finish Quiz
+                  </button>
+                </transition>
+              </template>
+            </QuestionCard>
+          </transition>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import QuestionCard from '@/components/QuestionCard.vue';
+import {
+  fetchQuizQuestions,
+  fetchQuizQuestionByIndex,
+  submitQuizAnswer,
+  finishQuiz,
+  updateCurrentQuestionIndex,
+} from '@/api/quiz';
+import type { Question, FinishQuizResponse } from '@/types';
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+import api from '@/api';
+import { useQuizStore, type UserAnswerState } from '@/stores/quiz';
+import { isAnswerCorrect } from '@/services/quizService';
+
+const { logout } = useAuthStore();
+const router = useRouter();
+const quizStore = useQuizStore();
+const auth = useAuthStore();
+
+const currentQuestion = ref<Question | null>(null);
+const currentIndex = ref(0);
+const answered = ref(false);
+const loading = ref(true);
+const quizFinished = ref(false);
+const score = ref<FinishQuizResponse | null>(null);
+const totalQuestions = ref(0);
+const selectedAnswers = ref<Record<number, number[]>>({});
+const correctAnswerIds = ref<number[]>([]);
+
+onMounted(async () => {
+  if (!auth.user) {
+    await auth.fetchUser();
+    if (!auth.user) return router.push('/login');
+  }
+
+  await api.get('/sanctum/csrf-cookie');
+  await startQuiz();
+});
+
+const startQuiz = async () => {
+  loading.value = true;
+  try {
+    const res = await fetchQuizQuestions();
+    totalQuestions.value = res.question_count;
+    currentIndex.value = res.current_index ?? 0;
+    await loadQuestion(currentIndex.value);
+  } catch (e) {
+    console.error('Error starting quiz', e);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadQuestion = async (index: number) => {
+  try {
+    const res = await fetchQuizQuestionByIndex(index);
+    currentQuestion.value = res.question;
+    currentIndex.value = res.index;
+    const saved: UserAnswerState | undefined = quizStore.userAnswers[res.question.id];
+    if (saved) {
+      selectedAnswers.value[res.question.id] = saved.answers;
+      answered.value = true;
+      correctAnswerIds.value = saved.correctAnswerIds;
+    } else {
+      answered.value = false;
+      correctAnswerIds.value = [];
+    }
+  } catch (e) {
+    console.error('Error loading question', e);
+  }
+};
+
+const handleAnswer = async (answers: number[], setResult: (isCorrect: boolean) => void) => {
+  const q = currentQuestion.value;
+  if (!q) return;
+
+  selectedAnswers.value[q.id] = answers;
+  const res = await submitQuizAnswer({ question_id: q.id, answer_ids: answers });
+  answered.value = true;
+  correctAnswerIds.value = res.correct_answer_ids || [];
+  const correct = isAnswerCorrect(answers, res.correct_answer_ids || []);
+  quizStore.saveUserAnswer(q.id, {
+    answers,
+    isCorrect: correct,
+    correctAnswerIds: res.correct_answer_ids || [],
+  });
+  setResult(correct);
+};
+
+const nextQuestion = async () => {
+  if (currentIndex.value < totalQuestions.value - 1) {
+    const newIndex = currentIndex.value + 1;
+    await updateCurrentQuestionIndex(newIndex);
+    await loadQuestion(newIndex);
+    answered.value = false;
+    correctAnswerIds.value = [];
+  }
+};
+
+const finish = async () => {
+  if (quizFinished.value) return;
+  const res = await finishQuiz();
+  score.value = res;
+  quizFinished.value = true;
+};
+
+const resetQuiz = async () => {
+  await api.post('/quiz/clear');
+  quizStore.resetQuiz();
+  quizFinished.value = false;
+  answered.value = false;
+  correctAnswerIds.value = [];
+  currentIndex.value = 0;
+  await startQuiz();
+};
+
+const abortTest = async () => {
+  await api.post('/quiz/clear');
+  quizStore.abortQuiz();
+  router.push('/exam-selection');
+};
+</script>
+
+<style scoped>
+/* Estilos específicos de la página si los hay */
+</style>
