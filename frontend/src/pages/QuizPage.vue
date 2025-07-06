@@ -11,7 +11,10 @@
               Score: {{ score?.correct_answers }}/{{ score?.total_questions }}
               ({{ score?.score_percent }}%)
             </p>
-            <button @click="resetQuiz" class="btn btn-outline-primary">Retake Quiz</button>
+            <div class="d-flex justify-content-center gap-2 mt-3">
+              <button @click="resetQuiz" class="btn btn-outline-primary">Retake Quiz</button>
+              <button @click="abortTest" class="btn btn-success">Exam Selection</button>
+            </div>
           </div>
         </div>
 
@@ -19,7 +22,7 @@
           <div class="d-flex justify-content-between mb-3">
             <small>Question {{ currentIndex + 1 }} of {{ totalQuestions }}</small>
             <div class="text-end">
-              <button class="btn btn-outline-danger btn-sm me-2" @click="abortTest">Abort Test</button>
+              <button class="btn btn-success btn-sm me-2" @click="abortTest">Exam Selection</button>
               <button class="btn btn-outline-danger btn-sm" @click="logout">Logout</button>
             </div>
           </div>
