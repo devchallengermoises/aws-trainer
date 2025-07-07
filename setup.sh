@@ -14,6 +14,27 @@ if [ -d "backend" ]; then
   else
     echo "vendor directory already exists. Skipping composer install."
   fi
+  
+  # Setup .env file if it doesn't exist
+  echo "🔧 Setting up environment configuration..."
+  if [ ! -f ".env" ]; then
+    if [ -f ".env.example" ]; then
+      cp .env.example .env
+      echo "✅ Created .env file from .env.example"
+    else
+      echo "❌ .env.example not found. Please create .env file manually."
+      exit 1
+    fi
+  else
+    echo "✅ .env file already exists"
+  fi
+  
+  # Clear Laravel caches to ensure fresh configuration
+  echo "🧹 Clearing Laravel caches..."
+  php artisan config:clear
+  php artisan cache:clear
+  echo "✅ Laravel caches cleared"
+  
   cd ..
 fi
 
