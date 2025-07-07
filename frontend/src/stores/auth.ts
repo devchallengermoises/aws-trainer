@@ -68,7 +68,7 @@ export const useAuthStore = defineStore('auth', {
         await authApi.clearQuiz();
         await authApi.logout();
       } catch (e) {
-        console.warn('Logout failed silently');
+        // Sign out failed silently
       } finally {
         this.user = null;
         router.push('/login');

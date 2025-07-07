@@ -38,6 +38,38 @@ export const useQuizStore = defineStore('quiz', () => {
     resetQuiz();
   };
 
+  // New method to validate state consistency
+  const validateState = () => {
+    // If quiz is started but no exam type is selected, reset
+    if (isQuizStarted.value && !selectedExamType.value) {
+      resetQuiz();
+      return false;
+    }
+    return true;
+  };
+
+  // New method to sync with backend state
+  const syncWithBackend = async () => {
+    try {
+      const response = await fetch('/api/quiz/validate-session', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      
+      if (!data.valid && isQuizStarted.value) {
+        resetQuiz();
+        return false;
+      }
+      return data.valid;
+    } catch (e) {
+      if (isQuizStarted.value) {
+        resetQuiz();
+      }
+      return false;
+    }
+  };
+
   return {
     selectedExamType,
     isQuizStarted,
@@ -47,6 +79,8 @@ export const useQuizStore = defineStore('quiz', () => {
     resetQuiz,
     saveUserAnswer,
     abortQuiz,
+    validateState,
+    syncWithBackend,
   };
 }, {
   persist: true

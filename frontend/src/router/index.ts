@@ -53,8 +53,12 @@ router.beforeEach(async (to, from, next) => {
       }
     }
 
-    if (to.path === '/exam-selection' && quiz.isQuizStarted) {
-      return next('/quiz')
+    // Validate quiz state consistency
+    if (quiz.isQuizStarted && to.path === '/exam-selection') {
+      const isValid = await quiz.syncWithBackend();
+      if (isValid) {
+        return next('/quiz');
+      }
     }
 
     if (quiz.isQuizStarted && to.path !== '/quiz' && to.path !== '/exam-selection') {

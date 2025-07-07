@@ -29,5 +29,9 @@ Route::middleware(['web', 'auth:sanctum'])->group(function () {
         app(\App\Services\QuizSessionStore::class)->clear();
         return response()->json(['cleared' => true]);
     });
+    Route::get('/quiz/validate-session', function () {
+        $store = app(\App\Services\QuizSessionStore::class);
+        return response()->json(['valid' => $store->exists()]);
+    });
     Route::get('/exam-types', [ExamTypeController::class, 'index']);
 });

@@ -3,7 +3,7 @@
     <div class="container">
       <transition name="fade-slide" mode="out-in">
         <div v-if="!loading" key="exam-card" class="mx-auto bg-white shadow-sm rounded-3 p-5 position-relative" style="max-width: 1200px;">
-          <button class="btn btn-outline-danger position-absolute top-0 end-0 m-3" @click="logout">Logout</button>
+          <button class="btn btn-outline-danger position-absolute top-0 end-0 m-3" @click="logout">Sign Out</button>
           <div class="text-center mb-4">
             <h2>Select Your Exam</h2>
             <p class="text-muted">Choose the AWS certification exam you want to practice</p>
@@ -64,7 +64,7 @@ onMounted(async () => {
   try {
     examTypes.value = await fetchExamTypes();
   } catch (error) {
-    console.error('Error fetching exam types:', error);
+    // Error fetching exam types
   } finally {
     loading.value = false;
   }
@@ -72,6 +72,14 @@ onMounted(async () => {
 
 const selectExam = async (examType: ExamType) => {
   await api.get('/sanctum/csrf-cookie');
+  
+  // Clear any existing quiz session before starting new one
+  try {
+    await api.post('/quiz/clear');
+  } catch (e) {
+    // Error clearing previous quiz session
+  }
+  
   quizStore.setSelectedExamType(examType);
   quizStore.startQuiz();
   router.push('/quiz');

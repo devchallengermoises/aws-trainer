@@ -42,7 +42,7 @@ VITE_API_BASE_URL=http://localhost:8000/api
 - Handles multiple correct answers (checkbox)
 - Highlights correct/incorrect answers
 - Session survives page reload
-- Supports logout and retake flow
+- Supports sign out and retake flow
 
 ---
 

@@ -5,7 +5,7 @@
     </h5>
 
     <div
-      v-for="(answer, idx) in shuffledAnswers"
+      v-for="(answer, idx) in answers"
       :key="answer.id"
       class="form-check"
       :class="{
@@ -86,7 +86,7 @@ const selectedAnswer = ref<number | null>(null);
 const selectedAnswers = ref<number[]>([]);
 const hasUserAnswered = ref(false);
 const isAnswerCorrect = ref(false);
-const shuffledAnswers = ref([...props.question.answers].sort(() => Math.random() - 0.5));
+const answers = ref([...props.question.answers]);
 
 const isMultiple = computed(() => props.question.is_multiple_choice);
 const maxSelectable = computed(() => props.question.max_selectable ?? 1);
@@ -115,7 +115,7 @@ watch(
       hasUserAnswered.value = false;
       isAnswerCorrect.value = false;
     }
-    shuffledAnswers.value = [...props.question.answers].sort(() => Math.random() - 0.5);
+    answers.value = [...props.question.answers];
   },
   { immediate: true }
 );

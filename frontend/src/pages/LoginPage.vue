@@ -162,7 +162,6 @@ const handleLogin = async () => {
     await auth.login(form)
   } catch (err: any) {
     // Errors are already handled in the store
-    console.error('Login error:', err)
   } finally {
     loading.value = false
   }

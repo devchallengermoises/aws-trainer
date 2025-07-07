@@ -13,7 +13,7 @@
             </p>
             <div class="d-flex justify-content-center gap-2 mt-3">
               <button @click="resetQuiz" class="btn btn-outline-primary">Retake Quiz</button>
-              <button @click="abortTest" class="btn btn-success">Exam Selection</button>
+              <button @click="abortTest" class="btn btn-outline-success">Exam Selection</button>
             </div>
           </div>
         </div>
@@ -22,8 +22,8 @@
           <div class="d-flex justify-content-between mb-3">
             <small>Question {{ currentIndex + 1 }} of {{ totalQuestions }}</small>
             <div class="text-end">
-              <button class="btn btn-success btn-sm me-2" @click="abortTest">Exam Selection</button>
-              <button class="btn btn-outline-danger btn-sm" @click="logout">Logout</button>
+              <button class="btn btn-outline-success btn-sm me-2" @click="abortTest">Exam Selection</button>
+              <button class="btn btn-outline-danger btn-sm" @click="logout">Sign Out</button>
             </div>
           </div>
           <transition name="fade-slide" mode="out-in">
@@ -48,7 +48,7 @@
                   </button>
                   <button
                     v-else
-                    class="btn btn-success"
+                    class="btn btn-outline-success"
                     @click="finish"
                   >
                     Finish Quiz
@@ -101,6 +101,12 @@ onMounted(async () => {
     if (!auth.user) return router.push('/login');
   }
 
+  // Validate state consistency before starting
+  if (!quizStore.validateState()) {
+    router.push('/exam-selection');
+    return;
+  }
+
   await api.get('/sanctum/csrf-cookie');
   await startQuiz();
 });
@@ -111,9 +117,18 @@ const startQuiz = async () => {
     const res = await fetchQuizQuestions();
     totalQuestions.value = res.question_count;
     currentIndex.value = res.current_index ?? 0;
+    
+    if (res.current_index !== undefined && !quizStore.isQuizStarted) {
+      quizStore.startQuiz();
+    }
+    
     await loadQuestion(currentIndex.value);
-  } catch (e) {
-    console.error('Error starting quiz', e);
+  } catch (e: any) {
+    if (e.response?.status === 404 || e.response?.status === 400) {
+      quizStore.resetQuiz();
+      router.push('/exam-selection');
+      return;
+    }
   } finally {
     loading.value = false;
   }
@@ -134,7 +149,7 @@ const loadQuestion = async (index: number) => {
       correctAnswerIds.value = [];
     }
   } catch (e) {
-    console.error('Error loading question', e);
+    // Error loading question
   }
 };
 
@@ -173,17 +188,29 @@ const finish = async () => {
 };
 
 const resetQuiz = async () => {
-  await api.post('/quiz/clear');
+  try {
+    await api.post('/quiz/clear');
+  } catch (e) {
+    // Error clearing quiz session
+  }
+  
   quizStore.resetQuiz();
   quizFinished.value = false;
   answered.value = false;
   correctAnswerIds.value = [];
   currentIndex.value = 0;
+  selectedAnswers.value = {};
+  
   await startQuiz();
 };
 
 const abortTest = async () => {
-  await api.post('/quiz/clear');
+  try {
+    await api.post('/quiz/clear');
+  } catch (e) {
+    // Error clearing quiz session
+  }
+  
   quizStore.abortQuiz();
   router.push('/exam-selection');
 };
