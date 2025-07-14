@@ -30,16 +30,29 @@ class QuizController extends Controller
         $examTypeCode = $request->input('exam_type_code');
         $reset = $request->boolean('reset');
 
+        \Log::info('Quiz start request', [
+            'exam_type_code' => $examTypeCode,
+            'reset' => $reset,
+            'session_exists' => $this->store->exists()
+        ]);
+
         $examType = ExamType::where('code', $examTypeCode)->firstOrFail();
 
         if ($reset || !$this->store->exists()) {
+            \Log::info('Initializing new quiz session');
             $this->initializeQuiz($examType);
+        } else {
+            \Log::info('Using existing quiz session');
         }
 
-        return response()->json([
+        $response = [
             'question_count' => $this->store->total(),
             'current_index' => $this->store->getCurrentIndex(),
-        ]);
+        ];
+
+        \Log::info('Quiz start response', $response);
+
+        return response()->json($response);
     }
 
     public function fetchQuestion(int $index): JsonResponse

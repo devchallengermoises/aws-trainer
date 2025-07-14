@@ -28,6 +28,31 @@ export const useQuizStore = defineStore('quiz', () => {
     selectedExamType.value = state.selectedExamType;
     isQuizStarted.value = state.isQuizStarted;
     userAnswers.value = state.userAnswers;
+    
+    // Force clear persisted state by triggering a reactive update
+    // This ensures localStorage is also cleared when persist: true is used
+    userAnswers.value = { ...userAnswers.value };
+  };
+
+  const forceResetQuiz = () => {
+    // This method forces a complete reset including persisted state
+    const state = resetQuizState();
+    selectedExamType.value = state.selectedExamType;
+    isQuizStarted.value = state.isQuizStarted;
+    userAnswers.value = state.userAnswers;
+    
+    // Force clear persisted state
+    userAnswers.value = { ...userAnswers.value };
+    
+    // Clear localStorage manually if needed
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const keys = Object.keys(window.localStorage);
+      keys.forEach(key => {
+        if (key.includes('quiz')) {
+          window.localStorage.removeItem(key);
+        }
+      });
+    }
   };
 
   const saveUserAnswer = (questionId: number, state: UserAnswerState) => {
@@ -77,6 +102,7 @@ export const useQuizStore = defineStore('quiz', () => {
     setSelectedExamType,
     startQuiz,
     resetQuiz,
+    forceResetQuiz,
     saveUserAnswer,
     abortQuiz,
     validateState,

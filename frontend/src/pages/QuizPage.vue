@@ -114,7 +114,7 @@ onMounted(async () => {
 const startQuiz = async () => {
   loading.value = true;
   try {
-    const res = await fetchQuizQuestions();
+    const res = await fetchQuizQuestions(false); // Don't reset for normal start
     totalQuestions.value = res.question_count;
     currentIndex.value = res.current_index ?? 0;
     
@@ -188,20 +188,66 @@ const finish = async () => {
 };
 
 const resetQuiz = async () => {
+  console.log('Starting quiz reset...');
+  
+  // Clear backend session first
   try {
-    await api.post('/quiz/clear');
+    const clearResponse = await api.post('/quiz/clear');
+    console.log('Backend session cleared:', clearResponse.data);
   } catch (e) {
-    // Error clearing quiz session
+    console.error('Error clearing backend session:', e);
   }
   
-  quizStore.resetQuiz();
+  // Store the current exam type before resetting
+  const currentExamType = quizStore.selectedExamType;
+  console.log('Current exam type:', currentExamType);
+  
+  // Reset frontend state with force reset to clear persisted data
+  quizStore.forceResetQuiz();
+  
+  // Restore the exam type after reset
+  if (currentExamType) {
+    quizStore.setSelectedExamType(currentExamType);
+    console.log('Exam type restored:', currentExamType);
+  }
+  
+  // Reset local state
   quizFinished.value = false;
   answered.value = false;
   correctAnswerIds.value = [];
   currentIndex.value = 0;
   selectedAnswers.value = {};
   
-  await startQuiz();
+  console.log('Starting new quiz with reset...');
+  // Pass reset=true to force a new quiz session
+  await startQuizWithReset();
+};
+
+const startQuizWithReset = async () => {
+  loading.value = true;
+  try {
+    console.log('Fetching quiz questions with reset=true...');
+    const res = await fetchQuizQuestions(true); // Pass reset=true
+    console.log('Quiz questions response:', res);
+    
+    totalQuestions.value = res.question_count;
+    currentIndex.value = res.current_index ?? 0;
+    
+    if (res.current_index !== undefined && !quizStore.isQuizStarted) {
+      quizStore.startQuiz();
+    }
+    
+    await loadQuestion(currentIndex.value);
+  } catch (e: any) {
+    console.error('Error starting quiz with reset:', e);
+    if (e.response?.status === 404 || e.response?.status === 400) {
+      quizStore.resetQuiz();
+      router.push('/exam-selection');
+      return;
+    }
+  } finally {
+    loading.value = false;
+  }
 };
 
 const abortTest = async () => {

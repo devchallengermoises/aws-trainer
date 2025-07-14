@@ -26,8 +26,11 @@ Route::middleware(['web', 'auth:sanctum'])->group(function () {
     Route::post('/quiz/finish', [QuizController::class, 'finish']);
     Route::post('/quiz/current-index', [QuizController::class, 'updateCurrentIndex']);
     Route::post('/quiz/clear', function () {
-        app(\App\Services\QuizSessionStore::class)->clear();
-        return response()->json(['cleared' => true]);
+        $store = app(\App\Services\QuizSessionStore::class);
+        $existed = $store->exists();
+        $store->clear();
+        \Log::info('Quiz session cleared', ['existed' => $existed]);
+        return response()->json(['cleared' => true, 'existed' => $existed]);
     });
     Route::get('/quiz/validate-session', function () {
         $store = app(\App\Services\QuizSessionStore::class);
