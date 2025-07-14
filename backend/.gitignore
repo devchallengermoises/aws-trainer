@@ -15,4 +15,4 @@ yarn-error.log
 /.vscode
 /backend/.DS_Store
 .DS_Store
-backend/database/seeders/
+backend/database/seeders/*
